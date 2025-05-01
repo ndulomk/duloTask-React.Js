@@ -80,7 +80,6 @@ function TaskList() {
     setIsAuthenticated(false);
     setShowLoginModal(true);
   };
-  console.log(tasks)
   return (
     <motion.div
       initial={{ opacity: 0 }}
