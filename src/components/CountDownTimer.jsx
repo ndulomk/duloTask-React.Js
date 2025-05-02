@@ -31,37 +31,53 @@ function CountdownTimer({ deadline }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft.expired]);
+  }, [deadline, timeLeft.expired]); 
+
+  const timeUnits = [
+    { label: 'Dias', value: timeLeft.days },
+    { label: 'Horas', value: timeLeft.hours },
+    { label: 'Minutos', value: timeLeft.minutes },
+    { label: 'Segundos', value: timeLeft.seconds },
+  ];
+
+   const unitVariants = {
+      initial: { y: 10, opacity: 0 },
+      animate: { y: 0, opacity: 1 },
+      exit: { y: -10, opacity: 0 }
+   };
+
+  if (timeLeft.expired) {
+    return (
+      <motion.div
+         initial={{ opacity: 0 }}
+         animate={{ opacity: 1 }}
+        className="text-center text-red-600 font-semibold bg-red-100 p-3 rounded-lg"
+      >
+        Prazo Expirado
+      </motion.div>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="text-center"
-    >
-      {timeLeft.expired ? (
-        <p className="text-red-600 font-semibold">Prazo expirado</p>
-      ) : (
-        <div className="flex justify-center gap-4 text-gray-800">
-          <div>
-            <span className="text-2xl font-bold">{timeLeft.days}</span>
-            <p className="text-sm">Dias</p>
-          </div>
-          <div>
-            <span className="text-2xl font-bold">{timeLeft.hours}</span>
-            <p className="text-sm">Horas</p>
-          </div>
-          <div>
-            <span className="text-2xl font-bold">{timeLeft.minutes}</span>
-            <p className="text-sm">Minutos</p>
-          </div>
-          <div>
-            <span className="text-2xl font-bold">{timeLeft.seconds}</span>
-            <p className="text-sm">Segundos</p>
-          </div>
-        </div>
-      )}
-    </motion.div>
+    <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-center">
+      {timeUnits.map((unit, index) => (
+        <motion.div
+          key={unit.label}
+          variants={unitVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: index * 0.1 }}
+          className="flex flex-col items-center p-3 shadow-sm min-w-[70px]"
+        >
+          <span className="text-3xl font-bold text-black">
+            {String(unit.value).padStart(2, '0')}
+          </span>
+          <span className="text-xs text-gray-500 uppercase tracking-wider">
+            {unit.label}
+          </span>
+        </motion.div>
+      ))}
+    </div>
   );
 }
 

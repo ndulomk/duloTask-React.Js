@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, } from 'framer-motion';
+import { FiX, FiEye, FiEyeOff, FiMail, FiLock } from 'react-icons/fi';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -12,6 +13,7 @@ function LoginModal({ setError, setIsAuthenticated, setShowModal, setShowRegiste
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateField = (name, value) => {
     let error = '';
@@ -21,7 +23,6 @@ function LoginModal({ setError, setIsAuthenticated, setShowModal, setShowRegiste
     }
     if (name === 'password') {
       if (!value) error = 'Senha é obrigatória';
-      else if (value.length < 6) error = 'Mínimo de 6 caracteres';
     }
     return error;
   };
@@ -29,20 +30,30 @@ function LoginModal({ setError, setIsAuthenticated, setShowModal, setShowRegiste
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+     if (errors[name] || errors.form) {
+       setErrors((prev) => ({ ...prev, [name]: validateField(name, value), form: '' }));
+     }
   };
+
+   const handleBlur = (e) => {
+     const { name, value } = e.target;
+     setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
     const { email, password } = formData;
 
-    const newErrors = {
+    const validationErrors = {
       email: validateField('email', email),
       password: validateField('password', password),
     };
-    setErrors(newErrors);
+    setErrors(validationErrors);
 
-    if (Object.values(newErrors).some((error) => error)) {
+    if (Object.values(validationErrors).some((error) => error)) {
+       setIsSubmitting(false);
       return;
     }
 
@@ -53,85 +64,126 @@ function LoginModal({ setError, setIsAuthenticated, setShowModal, setShowRegiste
       setShowModal(false);
     } catch (error) {
       setErrors({
-        form: error.response?.data?.message || 'Erro ao fazer login. Tente novamente.',
+        form: error.response?.data?.message || 'E-mail ou senha inválidos.',
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
+   const modalVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } }
+  };
+
   return (
-    <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        transition={{duration: 0.3}}
+        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        onClick={() => setShowModal(false)}
       >
         <motion.form
-          initial={{ scale: 0.8, y: 50 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.8, y: 50 }}
+          variants={modalVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl p-8 shadow-xl border border-gray-200 flex flex-col space-y-4 w-full max-w-md"
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl p-6 sm:p-8 shadow-xl border border-gray-200 flex flex-col space-y-5 w-full max-w-md relative"
         >
+           <motion.button
+              type="button"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Fechar modal"
+            >
+              <FiX size={24} />
+            </motion.button>
+
           <h2 className="text-2xl font-bold text-gray-800 text-center">Entrar</h2>
+
           {errors.form && (
-            <p className="text-red-500 text-sm text-center">{errors.form}</p>
+             <motion.p
+                initial={{opacity: 0, y: -10}}
+                animate={{opacity: 1, y: 0}}
+                className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-md">
+                {errors.form}
+             </motion.p>
           )}
-          <div>
+
+          <div className="relative">
+             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                 <FiMail/>
+              </span>
             <input
               className={`w-full border ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              } p-3 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500 outline-none transition-all`}
+                errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-cyan-500'
+              } p-3 pl-10 rounded-lg text-sm focus:ring-2 outline-none transition-all`}
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="E-mail"
+               aria-invalid={!!errors.email}
+               aria-describedby={errors.email ? "email-error" : undefined}
             />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            {errors.email && <motion.p
+               initial={{ opacity: 0, height: 0 }}
+               animate={{ opacity: 1, height: 'auto' }}
+             id="email-error" className="text-red-500 text-xs mt-1 pl-2">{errors.email}</motion.p>}
           </div>
+
           <div className="relative">
+             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                 <FiLock/>
+              </span>
             <input
               className={`w-full border ${
-                errors.password ? 'border-red-500' : 'border-gray-300'
-              } p-3 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500 outline-none transition-all`}
+                errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-cyan-500'
+              } p-3 pl-10 rounded-lg text-sm focus:ring-2 outline-none transition-all pr-10`}
               type={showPassword ? 'text' : 'password'}
               name="password"
               value={formData.password}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Senha"
+               aria-invalid={!!errors.password}
+               aria-describedby={errors.password ? "password-error" : undefined}
             />
-            <button
+             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-cyan-600 hover:text-cyan-700 text-sm font-medium transition-colors"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-cyan-600 transition-colors"
+               aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
             >
-              {showPassword ? 'Esconder' : 'Mostrar'}
+              {showPassword ? <FiEyeOff size={18}/> : <FiEye size={18}/>}
             </button>
             {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+               <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                id="password-error" className="text-red-500 text-xs mt-1 pl-2">{errors.password}</motion.p>
             )}
           </div>
-          <div className="flex justify-center gap-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="button"
-              onClick={() => setShowModal(false)}
-              className="w-full border border-red-500 text-red-500 rounded-lg py-2 font-medium hover:bg-red-50 transition-colors"
-            >
-              Cancelar
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              className="w-full bg-cyan-600 text-white rounded-lg py-2 font-medium hover:bg-cyan-700 transition-colors"
-            >
-              Entrar
-            </motion.button>
-          </div>
-          <p className="text-center text-gray-800 text-sm">
+
+          <motion.button
+            whileHover={{ scale: 1.02, y:-2, boxShadow: '0 4px 15px rgba(0, 180, 219, 0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg py-3 font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+          >
+            {isSubmitting ? 'Entrando...' : 'Entrar'}
+          </motion.button>
+
+          <p className="text-center text-gray-600 text-sm pt-2">
             Não tem conta?{' '}
             <button
               type="button"
@@ -139,14 +191,13 @@ function LoginModal({ setError, setIsAuthenticated, setShowModal, setShowRegiste
                 setShowModal(false);
                 setShowRegisterModal(true);
               }}
-              className="text-cyan-600 hover:underline"
+              className="text-cyan-600 hover:underline font-medium"
             >
               Criar conta
             </button>
           </p>
         </motion.form>
       </motion.div>
-    </AnimatePresence>
   );
 }
 
